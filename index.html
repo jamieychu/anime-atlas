@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anime Atlas — Crunchyroll Discovery Feature</title>
+  <meta name="description" content="Anime Atlas: A connection-driven discovery feature for Crunchyroll. Portfolio prototype by Jamie Chu.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --cr-bg: #0D0D0D;
+      --cr-surface: #1A1A1A;
+      --cr-surface-2: #242424;
+      --cr-orange: #F47521;
+      --cr-orange-hover: #FF8A3D;
+      --cr-text: #F5F5F5;
+      --cr-text-secondary: #A0A0A0;
+      --cr-text-muted: #666666;
+      --cr-border: #2A2A2A;
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--cr-bg);
+      color: var(--cr-text);
+      line-height: 1.6;
+      overflow-x: hidden;
+      text-wrap: pretty;
+    }
+
+    /* ============================================
+       SKIP LINK (Accessibility)
+       ============================================ */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 16px;
+      background: var(--cr-orange);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 0 0 8px 8px;
+      z-index: 9999;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .skip-link:focus { top: 0; }
+
+    /* ============================================
+       DESKTOP LAYOUT: Side-by-side
+       ============================================ */
+    .showcase-layout {
+      display: flex;
+      min-height: 100vh;
+      max-width: 1330px;
+      margin: 0 auto;
+    }
+
+    /* LEFT: Prototype panel (sticky on desktop) */
+    .prototype-panel {
+      display: none;
+    }
+
+    @media (min-width: 1024px) {
+      .prototype-panel {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 520px;
+        min-width: 520px;
+        height: 100vh;
+        position: sticky;
+        top: 0;
+        background: linear-gradient(180deg, #111 0%, #0A0A0A 100%);
+        border-right: 1px solid rgba(42,42,42,0.6);
+        flex-direction: column;
+        gap: 16px;
+        padding: 20px 64px;
+      }
+
+      .prototype-iframe-wrapper {
+        width: 390px;
+        height: min(844px, calc(100vh - 76px));
+        border-radius: 40px;
+        overflow: hidden;
+        position: relative;
+        box-shadow:
+          0 0 0 10px #1a1a1a,
+          0 0 0 12px #333,
+          0 25px 60px -10px rgba(0,0,0,0.6),
+          0 0 80px rgba(244, 117, 33, 0.06);
+      }
+
+      /* Notch */
+      .prototype-iframe-wrapper::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 35%;
+        height: 26px;
+        background: #0D0D0D;
+        border-radius: 0 0 14px 14px;
+        z-index: 10;
+      }
+
+      /* Home indicator */
+      .prototype-iframe-wrapper::after {
+        content: '';
+        position: absolute;
+        bottom: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 35%;
+        max-width: 134px;
+        height: 5px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 100px;
+        z-index: 10;
+      }
+
+      .prototype-iframe-wrapper iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        border-radius: 40px;
+      }
+
+      .desktop-fullscreen-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--cr-text-muted);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 500;
+        transition: color 0.2s;
+      }
+      .desktop-fullscreen-link:hover { color: var(--cr-orange); }
+      .desktop-fullscreen-link svg { width: 14px; height: 14px; }
+    }
+
+    /* Short desktop: panel stays fixed width, prototype clips naturally */
+
+    /* RIGHT: Content panel */
+    .content-panel {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* ============================================
+       MOBILE: Live preview with tap overlay
+       ============================================ */
+    .mobile-proto-preview {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 40px;
+      background: linear-gradient(180deg, #111 0%, var(--cr-bg) 100%);
+    }
+
+    .mobile-device-frame {
+      width: 180px;
+      height: 390px;
+      border-radius: 24px;
+      overflow: hidden;
+      position: relative;
+      box-shadow:
+        0 0 0 5px #1a1a1a,
+        0 0 0 6.5px #333,
+        0 12px 32px -6px rgba(0,0,0,0.5),
+        0 0 50px rgba(244,117,33,0.05);
+    }
+
+    .mobile-device-frame iframe {
+      width: 390px;
+      height: 844px;
+      border: none;
+      transform: scale(0.462);
+      transform-origin: top left;
+      pointer-events: none;
+    }
+
+    .mobile-tap-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(1px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-decoration: none;
+      border-radius: 24px;
+      transition: background 0.2s;
+    }
+    .mobile-tap-overlay:hover { background: rgba(0,0,0,0.35); }
+
+    .mobile-tap-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--cr-orange);
+      color: white;
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(244,117,33,0.3);
+    }
+
+    .mobile-tap-label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.6);
+      font-weight: 500;
+    }
+
+    @media (min-width: 1024px) {
+      .mobile-proto-preview { display: none; }
+    }
+
+    /* Larger phones: slightly bigger preview */
+    @media (min-width: 390px) and (max-width: 1023px) {
+      .mobile-device-frame {
+        width: 200px;
+        height: 433px;
+      }
+      .mobile-device-frame iframe {
+        transform: scale(0.513);
+      }
+    }
+
+    /* Tablets: bigger still */
+    @media (min-width: 600px) and (max-width: 1023px) {
+      .mobile-device-frame {
+        width: 260px;
+        height: 563px;
+      }
+      .mobile-device-frame iframe {
+        transform: scale(0.667);
+      }
+    }
+
+    /* ============================================
+       CONTENT SECTIONS
+       ============================================ */
+    .content-inner {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    @media (min-width: 1024px) {
+      .content-inner {
+        padding: 64px 48px 96px 48px;
+      }
+    }
+
+    /* Header */
+    .page-header {
+      margin-bottom: 48px;
+    }
+
+    .project-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--cr-orange);
+      margin-bottom: 16px;
+    }
+    .project-label::before {
+      content: '';
+      width: 20px;
+      height: 2px;
+      background: var(--cr-orange);
+      border-radius: 1px;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(32px, 5vw, 44px);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      color: var(--cr-text);
+      margin-bottom: 20px;
+    }
+
+    .subtitle {
+      font-size: 17px;
+      color: var(--cr-text-secondary);
+      line-height: 1.65;
+      max-width: 560px;
+    }
+
+    /* Section styling */
+    .section {
+      margin-bottom: 48px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--cr-orange);
+      margin-bottom: 16px;
+    }
+
+    h2 {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--cr-text);
+      margin-bottom: 16px;
+    }
+
+    p { color: var(--cr-text-secondary); margin-bottom: 12px; }
+    p:last-child { margin-bottom: 0; }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: var(--cr-border);
+      margin: 48px 0;
+    }
+
+    /* ============================================
+       KEY FEATURES CARDS
+       ============================================ */
+    .features-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: var(--cr-surface);
+      border: 1px solid var(--cr-border);
+      border-radius: 16px;
+      padding: 24px;
+      transition: border-color 0.2s;
+    }
+    .feature-card:hover { border-color: rgba(244,117,33,0.3); }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+      font-size: 20px;
+    }
+
+    .feature-card h3 {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--cr-text);
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--cr-text-secondary);
+    }
+
+    /* ============================================
+       EPISODE GUIDE
+       ============================================ */
+    .episode-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .episode-card {
+      background: var(--cr-surface);
+      border: 1px solid var(--cr-border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .episode-header {
+      padding: 20px 24px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .ep-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .ep-badge.ep1 { background: rgba(59,130,246,0.15); color: #60A5FA; }
+    .ep-badge.ep2 { background: rgba(251,191,36,0.15); color: #FBBF24; }
+    .ep-badge.ep3 { background: rgba(168,85,247,0.15); color: #C084FC; }
+
+    .episode-header h3 {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--cr-text);
+    }
+
+    .episode-body {
+      padding: 0 24px 20px;
+    }
+
+    .episode-body .ep-subtitle {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--cr-text-muted);
+      margin-bottom: 10px;
+    }
+
+    .episode-body p {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .happy-path {
+      margin-top: 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(244,117,33,0.12);
+      overflow: hidden;
+    }
+
+    .happy-path summary {
+      padding: 10px 16px;
+      background: rgba(244,117,33,0.06);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--cr-orange);
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .happy-path summary:hover { background: rgba(244,117,33,0.1); }
+    .happy-path summary::-webkit-details-marker { display: none; }
+    .happy-path summary::after {
+      content: '＋';
+      font-size: 14px;
+      font-weight: 400;
+      transition: transform 0.2s;
+    }
+    .happy-path[open] summary::after {
+      content: '−';
+    }
+
+    .happy-path-content {
+      padding: 12px 16px;
+      background: rgba(244,117,33,0.03);
+    }
+
+    .happy-path-content p {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--cr-text-secondary);
+    }
+
+    .happy-path-content ol {
+      list-style: none;
+      counter-reset: step;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .happy-path-content ol li {
+      counter-increment: step;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--cr-text-secondary);
+    }
+
+    .happy-path-content ol li::before {
+      content: counter(step);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--cr-orange);
+      background: rgba(244,117,33,0.1);
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* ============================================
+       DOCS LINK
+       ============================================ */
+    .docs-link-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 24px;
+      background: var(--cr-surface);
+      border: 1px solid var(--cr-border);
+      border-radius: 16px;
+      text-decoration: none;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .docs-link-card:hover {
+      border-color: rgba(244,117,33,0.3);
+      transform: translateY(-1px);
+    }
+
+    .docs-link-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(244,117,33,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 20px;
+    }
+
+    .docs-link-text h3 {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--cr-text);
+      margin-bottom: 2px;
+    }
+
+    .docs-link-text p {
+      font-size: 13px;
+      color: var(--cr-text-muted);
+    }
+
+    /* ============================================
+       DESIGN NOTES
+       ============================================ */
+    .notes-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .notes-list li {
+      display: flex;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--cr-text-secondary);
+      line-height: 1.6;
+    }
+
+    .notes-list li::before {
+      content: '→';
+      color: var(--cr-text-muted);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ============================================
+       TOOLS
+       ============================================ */
+    .tools-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .tool-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: var(--cr-surface);
+      border: 1px solid var(--cr-border);
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--cr-text-secondary);
+      text-decoration: none;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .tool-tag:hover { border-color: var(--cr-text-muted); color: var(--cr-text); }
+
+    /* ============================================
+       FOOTER
+       ============================================ */
+    .page-footer {
+      padding: 32px 24px;
+      text-align: center;
+      border-top: 1px solid var(--cr-border);
+    }
+
+    .footer-label {
+      font-size: 12px;
+      color: var(--cr-text-muted);
+      margin-bottom: 4px;
+    }
+
+    .footer-name {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--cr-text);
+    }
+
+    /* ============================================
+       RESPONSIVE FINE-TUNING
+       ============================================ */
+    @media (max-width: 480px) {
+      .content-inner { padding: 32px 16px 64px; }
+      h1 { font-size: 28px; }
+      .feature-card { padding: 20px; }
+      .episode-header { padding: 16px 20px 0; }
+      .episode-body { padding: 0 20px 16px; }
+    }
+
+    /* Focus styles for accessibility */
+    a:focus-visible, button:focus-visible {
+      outline: 2px solid var(--cr-orange);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <div class="showcase-layout">
+    <!-- LEFT: Desktop prototype panel -->
+    <aside class="prototype-panel" aria-label="Prototype preview">
+      <div class="prototype-iframe-wrapper">
+        <iframe 
+          src="prototype/" 
+          title="Anime Atlas interactive prototype"
+          loading="lazy"
+          allow="autoplay"
+        ></iframe>
+      </div>
+      <a href="prototype/" target="_blank" rel="noopener" class="desktop-fullscreen-link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        View Fullscreen
+      </a>
+    </aside>
+
+    <!-- RIGHT: Content -->
+    <main class="content-panel" id="main-content">
+
+      <!-- Mobile: Live prototype preview -->
+      <div class="mobile-proto-preview">
+        <div class="mobile-device-frame">
+          <iframe 
+            src="prototype/" 
+            title="Anime Atlas prototype preview"
+            loading="lazy"
+            tabindex="-1"
+          ></iframe>
+          <a href="prototype/" class="mobile-tap-overlay" aria-label="Open prototype fullscreen">
+            <span class="mobile-tap-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+              Open Prototype
+            </span>
+            <span class="mobile-tap-label">Tap to open fullscreen</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="content-inner">
+
+        <!-- HEADER -->
+        <header class="page-header">
+          <div class="project-label">Crunchyroll · Content Discovery</div>
+          <h1>Anime Atlas</h1>
+          <p class="subtitle">Crunchyroll has 1,400+ titles, but most users watch the same simulcasts and churn. Anime Atlas turns the back catalog into structured discovery paths — building real genre expertise one show at a time.</p>
+        </header>
+
+        <!-- DOCS LINK -->
+        <section class="section" aria-label="Documentation">
+          <a href="https://jamieychu.notion.site/anime-atlas" target="_blank" rel="noopener" class="docs-link-card" id="docs-link">
+            <div class="docs-link-icon">📄</div>
+            <div class="docs-link-text">
+              <h3>View Full Documentation →</h3>
+              <p>Research, strategy, UX specifications &amp; content curation methodology</p>
+            </div>
+          </a>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- PRODUCT CHALLENGE -->
+        <section class="section" aria-labelledby="challenge-heading">
+          <div class="section-label" id="challenge-heading">Product Challenge</div>
+          <div class="challenge-content">
+            <p>Crunchyroll's catalog has tripled, but discovery hasn't kept pace. Users show up for new releases and then leave — there's a library full of shows they'd love, but no path to find them. Standard fixes (better algorithms, editorial lists, more filtering) help users who already know what they want. They don't help the mid-to-power user who's watched 20–200 shows and hit a wall.</p>
+            <p>So the design question became: how do you turn "I don't know what to watch" into confident exploration — without just throwing more recommendations at people?</p>
+          </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- KEY DESIGN DECISIONS -->
+        <section class="section" aria-labelledby="decisions-heading">
+          <div class="section-label" id="decisions-heading">Key Design Decisions</div>
+          <div class="features-grid">
+            <div class="feature-card">
+              <div class="feature-icon" style="background:rgba(244,117,33,0.12);">🧭</div>
+              <h3>Expertise Over Algorithms</h3>
+              <p>Atlas connects shows through thematic relationships — tone, narrative style, character dynamics — so users build real genre literacy, not just a longer watch history.</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon" style="background:rgba(139,92,246,0.12);">🗺️</div>
+              <h3>Fewer Choices, Clearer Paths</h3>
+              <p>Atlas maps about 107 shows per genre, but a new explorer starts with roughly 25. Scoping it down turns browsing into a guided journey — discovery that feels like exploration, not a catalog dump.</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon" style="background:rgba(34,197,94,0.12);">📌</div>
+              <h3>Rewards That Shape a Taste Profile</h3>
+              <p>Pins, titles, and frames map to your exploration history — which genres you've gone deep in, which hidden gems you've found. Your collection tells people what kind of fan you are.</p>
+            </div>
+          </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- EPISODE GUIDE -->
+        <section class="section" aria-labelledby="episodes-heading">
+          <div class="section-label">Episode Guide</div>
+          <h2 id="episodes-heading">Three Scenarios to Explore</h2>
+          <p style="margin-bottom:20px;">Each episode demonstrates a different stage of the discovery journey. Use the episode selector in the prototype to switch between them.</p>
+
+          <div class="episode-cards">
+            <!-- EP1 -->
+            <article class="episode-card">
+              <div class="episode-header">
+                <span class="ep-badge ep1">EP. 1</span>
+                <h3>Pilot</h3>
+              </div>
+              <div class="episode-body">
+                <p class="ep-subtitle">Sora — New user, no watch history</p>
+                <p>First encounter with Anime Atlas. The tutorial introduces the concept, then you browse shows on the Home screen, "watch" your first anime, and see the first discovery path unlock.</p>
+                <details class="happy-path">
+                  <summary>Happy Path</summary>
+                  <div class="happy-path-content">
+                    <ol><li>Tap a show in Hero or rows</li><li>Tap "Simulate Watch"</li><li>Notice pip on My Lists</li><li>Tap Discovery Card → Atlas</li><li>Tap "Chart This Show" 🎉</li></ol>
+                  </div>
+                </details>
+              </div>
+            </article>
+
+            <!-- EP2 -->
+            <article class="episode-card">
+              <div class="episode-header">
+                <span class="ep-badge ep2">EP. 2</span>
+                <h3>Previously On...</h3>
+              </div>
+              <div class="episode-body">
+                <p class="ep-subtitle">Ren — Returning fan, 19 shows already watched</p>
+                <p>Simulates the launch experience for an existing Crunchyroll subscriber. A batch claim ceremony lets you chart all previously-watched shows at once, instantly unlocking pins and exploration paths.</p>
+                <details class="happy-path">
+                  <summary>Happy Path</summary>
+                  <div class="happy-path-content">
+                    <ol><li>Complete or skip the tutorial</li><li>Navigate to My Lists tab</li><li>Tap "Chart All" in ceremony</li><li>View your earned pins</li><li>Explore connections in Atlas</li></ol>
+                  </div>
+                </details>
+              </div>
+            </article>
+
+            <!-- EP3 -->
+            <article class="episode-card">
+              <div class="episode-header">
+                <span class="ep-badge ep3">EP. 3</span>
+                <h3>Post-Credits</h3>
+              </div>
+              <div class="episode-body">
+                <p class="ep-subtitle">Ryuu — Power user, 107/108 Action shows charted</p>
+                <p>One show away from Action Legend status. Chart the final show to trigger the Legend completion ceremony — earning the Legend pin, frame, and background. Explore a fully-built profile and deep pin collection.</p>
+                <details class="happy-path">
+                  <summary>Happy Path</summary>
+                  <div class="happy-path-content">
+                    <ol><li>Go to My Lists tab</li><li>Tap "Chart in Atlas" on Discovery Card</li><li>Chart Flame of Recca 🎉</li><li>Tap "View Rewards" → Legend tab</li><li>Customize your taste profile card</li></ol>
+                  </div>
+                </details>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- DESIGN NOTES -->
+        <section class="section" aria-labelledby="notes-heading">
+          <div class="section-label">Design Notes</div>
+          <h2 id="notes-heading">Caveats &amp; Context</h2>
+          <ul class="notes-list">
+            <li>Crunchyroll streaming availability verified November 2025. Some titles may have shifted since due to licensing changes.</li>
+            <li>Prototype scope covers 2 of 6 planned genres (Action with 108 shows, Comedy with 42). System architecture designed to scale to all 6.</li>
+            <li>Show images sourced from official promotional materials for prototype demonstration purposes only.</li>
+          </ul>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- TOOLS -->
+        <section class="section" aria-labelledby="tools-heading">
+          <div class="section-label">Built With</div>
+          <div class="tools-row">
+            <a href="https://claude.ai" target="_blank" rel="noopener" class="tool-tag">🤖 Claude AI</a>
+            <a href="https://www.midjourney.com" target="_blank" rel="noopener" class="tool-tag">🎨 Midjourney</a>
+            <a href="https://www.notion.so" target="_blank" rel="noopener" class="tool-tag">📝 Notion</a>
+            <span class="tool-tag">⚛️ React</span>
+            <span class="tool-tag">🎨 Tailwind CSS</span>
+            <a href="https://superdesign.ai" target="_blank" rel="noopener" class="tool-tag">✨ Superdesign</a>
+          </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="page-footer">
+          <p class="footer-label">Designed &amp; Created by</p>
+          <p class="footer-name">Jamie Chu</p>
+        </footer>
+
+      </div>
+    </main>
+  </div>
+</body>
+</html>
